@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .font-serif-italic {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-style: italic;
+  }
+  .font-sans-display {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  .font-mono-code {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom background mesh and glow effects */
+.bg-supaste-gradient {
+  background: linear-gradient(135deg, #0e1e4d 0%, #1a56db 38%, #1f6bff 70%, #00d2ff 100%);
+}
+
+.bg-glass-card {
+  background: rgba(13, 19, 38, 0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.border-glass {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.shadow-glass {
+  box-shadow: 0 30px 100px -20px rgba(0, 0, 0, 0.7), 0 0 40px rgba(0, 210, 255, 0.15);
+}
+
+/* Auth dropdown animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in-from-top-2 {
+  from { transform: translateY(-8px); }
+  to { transform: translateY(0); }
+}
+
+.animate-in {
+  animation: fade-in 0.2s ease-out, slide-in-from-top-2 0.2s ease-out;
+}
+
+
