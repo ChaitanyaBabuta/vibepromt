@@ -82,14 +82,14 @@ export default function App() {
 
   const handleOpenBuilderWithPrompt = (prompt: UIPrompt) => {
     setActiveTab('builder');
-    // Scroll smoothly to builder section if needed
-    window.scrollTo({ top: 500, behavior: 'smooth' });
+    // The builder is its own view, so bring the user to the top of it
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 selection:bg-indigo-500/30 font-sans antialiased">
-      
-      {/* Sticky Glassmorphic Header */}
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+
+      {/* Sticky header */}
       <Header
         activeTab={activeTab}
         setActiveTab={(tab) => {
@@ -125,7 +125,7 @@ export default function App() {
       )}
 
       {/* Main View Area */}
-      <main>
+      <main className="flex-1">
         {activeTab === 'builder' ? (
           <PromptBuilder
             onSavePrompt={handleSavePrompt}
@@ -168,6 +168,7 @@ export default function App() {
         onClose={() => setSelectedPromptModal(null)}
         isFavorite={selectedPromptModal ? favorites.includes(selectedPromptModal.id) : false}
         onToggleFavorite={handleToggleFavorite}
+        onCopyPrompt={handleCopyPrompt}
         onOpenBuilderWithPrompt={handleOpenBuilderWithPrompt}
       />
 

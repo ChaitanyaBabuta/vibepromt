@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PromptCard } from './PromptCard';
 import { UIPrompt, TargetTool } from '../types';
-import { ArrowUpDown, SearchX, Grid, Search, ChevronDown, Sparkles, Loader2 } from 'lucide-react';
+import { ChevronDown, Search, SearchX, Grid, X } from 'lucide-react';
+import { Button, Chip, EmptyState, FieldLabel, Select, Spinner } from './ui/primitives';
+import { cn } from '../lib/utils';
 
 interface PromptGridProps {
   prompts: UIPrompt[];
@@ -27,6 +29,7 @@ const CATEGORY_TABS = [
   'Mobile App',
   'Portfolio',
   'Analytics',
+  'FinTech',
 ];
 
 const TARGET_TOOLS_FILTER: (TargetTool | 'All')[] = ['All', 'v0', 'Cursor', 'Bolt.new', 'Claude', 'Windsurf'];
@@ -122,116 +125,136 @@ export const PromptGrid: React.FC<PromptGridProps> = ({
     return () => observer.disconnect();
   }, [hasMore, visibleCount, sortedPrompts.length]);
 
+  const isFavoritesView = selectedCategory === 'Favorites';
+
   return (
-    <section id="prompts-grid" className="py-8 px-4 sm:px-6 lg:px-8 bg-zinc-950">
-      <div className="mx-auto max-w-7xl">
-        
-        {/* Filter Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-zinc-800/80 mb-6">
-          
-          {/* Categories */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
-            {CATEGORY_TABS.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
-                  selectedCategory === cat
-                    ? 'bg-red-600 text-white'
-                    : 'bg-zinc-900/80 text-zinc-400 hover:text-white border border-zinc-800'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          {/* Tools & Sorting */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-lg p-0.5 text-xs">
-              {TARGET_TOOLS_FILTER.map((tool) => (
-                <button
-                  key={tool}
-                  onClick={() => setSelectedTool(tool)}
-                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                    selectedTool === tool
-                      ? 'bg-zinc-800 text-red-300'
-                      : 'text-zinc-400 hover:text-zinc-200'
-                  }`}
-                >
-                  {tool}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1 text-xs text-zinc-300">
-              <ArrowUpDown className="h-3 w-3 text-zinc-500" />
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-transparent text-xs text-zinc-300 focus:outline-none cursor-pointer"
-              >
-                <option value="popular">Popular</option>
-                <option value="copies">Copied</option>
-                <option value="newest">Newest</option>
-              </select>
-            </div>
-          </div>
-
-        </div>
-
-        {/* Search Bar & Count & Full View Button */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3 flex-1 max-w-md">
-            {setSearchQuery && (
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search prompts..."
-                  className="w-full bg-zinc-900/90 border border-zinc-700/80 rounded-xl py-1.5 pl-9 pr-8 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all shadow-sm"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400 hover:text-white"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            )}
-            <p className="text-xs font-mono text-zinc-400 whitespace-nowrap">
-              Showing <span className="text-white font-bold">{visiblePrompts.length}</span> of <span className="text-cyan-300 font-bold">{sortedPrompts.length}</span> prompts
+    <section id="prompts-grid" className="bg-background py-10 sm:py-12">
+      <div className="container-page">
+        {/* View heading */}
+        <div className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+              {isFavoritesView ? 'Saved prompts' : 'Prompt library'}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {isFavoritesView
+                ? 'Prompts you have saved in this browser.'
+                : 'Browse, filter and copy production-ready system prompts.'}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            {onOpenAllPromptsModal && (
-              <button
-                onClick={onOpenAllPromptsModal}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 px-3 py-1 text-xs font-bold text-cyan-300 hover:text-white transition-all shadow-sm"
-              >
-                <Grid className="w-3.5 h-3.5 text-cyan-400" />
-                <span>View All Prompts Modal</span>
-              </button>
-            )}
-            {selectedCategory !== 'All' && (
-              <button
-                onClick={() => setSelectedCategory('All')}
-                className="text-xs text-red-400 hover:underline"
-              >
-                Reset
-              </button>
-            )}
+
+          {onOpenAllPromptsModal && (
+            <Button variant="secondary" size="sm" onClick={onOpenAllPromptsModal}>
+              <Grid className="h-3.5 w-3.5" />
+              <span>Full-screen view</span>
+            </Button>
+          )}
+        </div>
+
+        {/* Filter toolbar */}
+        <div className="mt-6 space-y-4">
+          {/* Categories */}
+          <div>
+            <FieldLabel>Category</FieldLabel>
+            <div className="-mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none">
+              {CATEGORY_TABS.map((cat) => (
+                <Chip key={cat} selected={selectedCategory === cat} onClick={() => setSelectedCategory(cat)}>
+                  {cat}
+                </Chip>
+              ))}
+            </div>
+          </div>
+
+          {/* Search + tool + sort */}
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              {setSearchQuery && (
+                <div className="w-full sm:w-72">
+                  <FieldLabel>Search</FieldLabel>
+                  <div className="relative">
+                    <Search
+                      className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-subtle-foreground"
+                      aria-hidden="true"
+                    />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Title, description, tech stack…"
+                      aria-label="Search prompts"
+                      className={cn(
+                        'h-9 w-full rounded-md border border-border bg-input pl-8 pr-8 text-sm text-foreground',
+                        'placeholder:text-subtle-foreground transition-colors duration-150',
+                        'hover:border-border-strong focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring/25',
+                      )}
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        aria-label="Clear search"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-subtle-foreground transition-colors hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <FieldLabel>Target tool</FieldLabel>
+                <div className="-mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-none">
+                  {TARGET_TOOLS_FILTER.map((tool) => (
+                    <Chip key={tool} selected={selectedTool === tool} onClick={() => setSelectedTool(tool)}>
+                      {tool}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <FieldLabel>Sort</FieldLabel>
+                <Select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'popular' | 'copies' | 'newest')}
+                  aria-label="Sort prompts"
+                  className="w-36"
+                >
+                  <option value="popular">Most liked</option>
+                  <option value="copies">Most copied</option>
+                  <option value="newest">Newest first</option>
+                </Select>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Prompts Grid */}
+        {/* Result count */}
+        <div className="mt-6 flex items-center justify-between gap-3 border-t border-border pt-4">
+          <p className="font-mono text-xs text-subtle-foreground">
+            <span className="text-foreground">{visiblePrompts.length}</span>
+            <span> / {sortedPrompts.length} prompts</span>
+          </p>
+          {(selectedCategory !== 'All' || selectedTool !== 'All') && !isFavoritesView && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedCategory('All');
+                setSelectedTool('All');
+              }}
+            >
+              Clear filters
+            </Button>
+          )}
+        </div>
+
+        {/* Grid */}
         {sortedPrompts.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {visiblePrompts.map((prompt) => (
                 <PromptCard
                   key={prompt.id}
@@ -244,75 +267,86 @@ export const PromptGrid: React.FC<PromptGridProps> = ({
               ))}
             </div>
 
-            {/* Pagination Controls & Load More */}
+            {/* Pagination */}
             {hasMore ? (
-              <div className="mt-8 pt-6 border-t border-zinc-800/60 flex flex-col items-center justify-center gap-3">
-                
-                {/* Progress bar */}
-                <div className="w-full max-w-md bg-zinc-900 rounded-full h-1.5 overflow-hidden border border-zinc-800">
+              <div className="mt-10 flex flex-col items-center gap-4 border-t border-border pt-8">
+                <div
+                  className="h-0.5 w-full max-w-xs overflow-hidden rounded-full bg-surface-tertiary"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={sortedPrompts.length}
+                  aria-valuenow={visiblePrompts.length}
+                >
                   <div
-                    className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full transition-all duration-300 rounded-full"
+                    className="h-full bg-foreground transition-all duration-300"
                     style={{ width: `${Math.min(100, (visiblePrompts.length / sortedPrompts.length) * 100)}%` }}
                   />
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleLoadMore}
-                    disabled={isLoadingMore}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-cyan-500/50 text-xs font-bold text-zinc-200 hover:text-white transition-all shadow-lg hover:shadow-cyan-500/10 cursor-pointer disabled:opacity-50"
-                  >
+                <div className="flex items-center gap-2">
+                  <Button variant="secondary" size="md" onClick={handleLoadMore} disabled={isLoadingMore}>
                     {isLoadingMore ? (
                       <>
-                        <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
-                        <span>Loading more...</span>
+                        <Spinner className="h-3.5 w-3.5" />
+                        <span>Loading</span>
                       </>
                     ) : (
                       <>
-                        <span>Load More Prompts (+{Math.min(ITEMS_PER_PAGE, sortedPrompts.length - visiblePrompts.length)})</span>
-                        <ChevronDown className="w-4 h-4 text-cyan-400" />
+                        <span>
+                          Load {Math.min(ITEMS_PER_PAGE, sortedPrompts.length - visiblePrompts.length)} more
+                        </span>
+                        <ChevronDown className="h-3.5 w-3.5 text-subtle-foreground" />
                       </>
                     )}
-                  </button>
-
-                  <button
-                    onClick={handleLoadAll}
-                    className="px-3.5 py-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-xs font-semibold text-zinc-400 hover:text-zinc-200 transition-all cursor-pointer"
-                  >
-                    Show All ({sortedPrompts.length})
-                  </button>
+                  </Button>
+                  <Button variant="ghost" size="md" onClick={handleLoadAll}>
+                    Show all {sortedPrompts.length}
+                  </Button>
                 </div>
 
-                {/* Auto Scroll Sentinel */}
-                <div ref={observerTarget} className="h-4 w-full" />
+                {/* Auto-load sentinel */}
+                <div ref={observerTarget} className="h-4 w-full" aria-hidden="true" />
               </div>
-            ) : sortedPrompts.length > ITEMS_PER_PAGE && (
-              <div className="mt-8 text-center text-xs text-zinc-500 font-mono">
-                ✓ Showing all {sortedPrompts.length} prompts
-              </div>
+            ) : (
+              sortedPrompts.length > ITEMS_PER_PAGE && (
+                <p className="mt-10 border-t border-border pt-6 text-center font-mono text-xs text-subtle-foreground">
+                  All {sortedPrompts.length} prompts shown
+                </p>
+              )
             )}
           </>
         ) : (
-          <div className="py-16 text-center rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/20">
-            <SearchX className="mx-auto h-10 w-10 text-zinc-600 mb-2" />
-            <h3 className="text-sm font-bold text-white">No Prompts Found</h3>
-            <p className="text-xs text-zinc-500 mt-1">
-              Try adjusting your search or resetting filters.
-            </p>
-            <button
-              onClick={() => {
-                setSelectedCategory('All');
-                setSelectedTool('All');
-              }}
-              className="mt-3 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white"
-            >
-              Reset Filters
-            </button>
-          </div>
+          <EmptyState
+            className="mt-6"
+            icon={SearchX}
+            title={isFavoritesView ? 'No saved prompts yet' : 'No prompts found'}
+            description={
+              isFavoritesView
+                ? 'Save a prompt from the library and it will appear here.'
+                : 'Nothing matches the current filters. Try a different keyword or clear the filters.'
+            }
+            action={
+              isFavoritesView ? (
+                <Button variant="secondary" size="md" onClick={() => setSelectedCategory('All')}>
+                  Browse the library
+                </Button>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => {
+                    setSelectedCategory('All');
+                    setSelectedTool('All');
+                    setSearchQuery?.('');
+                  }}
+                >
+                  Clear filters
+                </Button>
+              )
+            }
+          />
         )}
-
       </div>
     </section>
   );
 };
-

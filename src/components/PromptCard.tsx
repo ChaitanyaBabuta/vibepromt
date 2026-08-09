@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Copy, Check, Heart } from 'lucide-react';
 import { UIPrompt } from '../types';
-import { formatNumber } from '../lib/utils';
+import { formatNumber, cn } from '../lib/utils';
+import { Badge } from './ui/primitives';
 
 interface PromptCardProps {
   prompt: UIPrompt;
@@ -29,63 +30,103 @@ export const PromptCard: React.FC<PromptCardProps> = ({
   };
 
   return (
-    <div
+    <article
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${prompt.title}`}
       onClick={() => onSelectPrompt(prompt)}
-      className="group relative flex flex-col justify-between rounded-xl bg-zinc-900/40 border border-zinc-800/80 p-4 hover:border-red-500/50 hover:bg-zinc-900/80 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-red-500/5"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelectPrompt(prompt);
+        }
+      }}
+      className={cn(
+        'group flex h-full cursor-pointer flex-col rounded-lg border border-border bg-surface p-4',
+        'transition-colors duration-150 hover:border-border-strong hover:bg-hover',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+      )}
     >
-      <div>
-        {/* Category & Favorite */}
-        <div className="flex items-center justify-between mb-3">
-          <span className="rounded px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider bg-zinc-800/90 text-zinc-300 border border-zinc-700/50">
-            {prompt.category}
-          </span>
+      {/* Meta row */}
+      <div className="flex items-start justify-between gap-2">
+        <Badge variant="neutral" className="font-mono uppercase tracking-wide">
+          {prompt.category}
+        </Badge>
 
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(prompt.id);
-            }}
-            className="p-1 rounded text-zinc-500 hover:text-red-400 transition-colors"
-            title={isFavorite ? 'Remove from saved' : 'Save prompt'}
-          >
-            <Heart className={`h-3.5 w-3.5 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
-          </button>
-        </div>
-
-        {/* Title */}
-        <h3 className="text-sm font-bold text-white group-hover:text-red-400 transition-colors line-clamp-1 mb-1.5">
-          {prompt.title}
-        </h3>
-
-        {/* Short Description */}
-        <p className="text-xs text-zinc-400 leading-relaxed line-clamp-2 mb-4">
-          {prompt.description}
-        </p>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(prompt.id);
+          }}
+          aria-label={isFavorite ? 'Remove from saved' : 'Save prompt'}
+          aria-pressed={isFavorite}
+          className={cn(
+            '-mr-1 -mt-1 flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md',
+            'transition-colors duration-150 hover:bg-active',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            isFavorite ? 'text-foreground' : 'text-subtle-foreground hover:text-foreground',
+          )}
+        >
+          <Heart className={cn('h-3.5 w-3.5', isFavorite && 'fill-current')} />
+        </button>
       </div>
 
-      {/* Footer Info & Copy Action */}
-      <div className="pt-3 border-t border-zinc-800/60 flex items-center justify-between">
-        <span className="text-[11px] text-zinc-500 font-mono">
+      {/* Body */}
+      <h3 className="mt-3 line-clamp-2 text-[13px] font-semibold leading-snug tracking-tight text-foreground">
+        {prompt.title}
+      </h3>
+      <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+        {prompt.description}
+      </p>
+
+      {/* Tech stack */}
+      <div className="mt-3 mb-4 flex items-center gap-1 overflow-hidden">
+        {prompt.techStack.slice(0, 2).map((tech) => (
+          <span
+            key={tech}
+            className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-subtle-foreground"
+          >
+            {tech}
+          </span>
+        ))}
+        {prompt.techStack.length > 2 && (
+          <span className="px-1 py-0.5 font-mono text-[10px] text-subtle-foreground">
+            +{prompt.techStack.length - 2}
+          </span>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-3">
+        <span className="truncate font-mono text-[11px] text-subtle-foreground">
           {prompt.author.handle}
         </span>
 
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 rounded-md bg-zinc-800 hover:bg-red-600 hover:text-white px-2.5 py-1 text-xs font-medium text-zinc-300 transition-colors"
+          aria-label={`Copy ${prompt.title}`}
+          className={cn(
+            'flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-border px-2 py-1',
+            'text-[11px] font-medium transition-colors duration-150',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            copied
+              ? 'border-transparent bg-success-muted text-success'
+              : 'bg-surface text-muted-foreground hover:border-border-strong hover:bg-active hover:text-foreground',
+          )}
         >
           {copied ? (
             <>
-              <Check className="h-3 w-3 text-emerald-400" />
+              <Check className="h-3 w-3" />
               <span>Copied</span>
             </>
           ) : (
             <>
               <Copy className="h-3 w-3" />
-              <span>{formatNumber(prompt.copies)}</span>
+              <span className="font-mono">{formatNumber(prompt.copies)}</span>
             </>
           )}
         </button>
       </div>
-    </div>
+    </article>
   );
 };
