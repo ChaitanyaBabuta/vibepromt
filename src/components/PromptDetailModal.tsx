@@ -1,24 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, 
-  Copy, 
-  Check, 
-  Heart, 
-  Share2, 
-  Sparkles, 
-  ArrowLeft, 
-  Terminal, 
-  Cpu, 
-  Layers, 
-  Zap, 
-  ExternalLink, 
-  Code2, 
-  BookOpen, 
-  Sliders,
-  CheckCircle2,
-  Wand2
+import {
+  X, Copy, Check, Heart, ArrowLeft, Terminal, Layers, Code2, BookOpen, Sliders, Wand2, Sparkles,
 } from 'lucide-react';
 import { UIPrompt } from '../types';
+import { Badge, Button, Well } from './ui/primitives';
+import { cn } from '../lib/utils';
 
 interface PromptDetailModalProps {
   isOpen: boolean;
@@ -26,8 +12,13 @@ interface PromptDetailModalProps {
   onClose: () => void;
   isFavorite: boolean;
   onToggleFavorite: (id: string) => void;
-  onCopyPrompt: (prompt: UIPrompt) => void;
+  /** Increments the prompt's copy counter in App state. */
+  onCopyPrompt?: (prompt: UIPrompt) => void;
+  /** Switches to the builder view. */
+  onOpenBuilderWithPrompt?: (prompt: UIPrompt) => void;
 }
+
+type DetailTab = 'prompt' | 'usage' | 'components';
 
 export const PromptDetailModal: React.FC<PromptDetailModalProps> = ({
   isOpen,
@@ -36,9 +27,10 @@ export const PromptDetailModal: React.FC<PromptDetailModalProps> = ({
   isFavorite,
   onToggleFavorite,
   onCopyPrompt,
+  onOpenBuilderWithPrompt,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'prompt' | 'instructions' | 'components'>('prompt');
+  const [activeTab, setActiveTab] = useState<DetailTab>('prompt');
 
   // Handle ESC key to exit detail view
   useEffect(() => {
@@ -63,344 +55,290 @@ export const PromptDetailModal: React.FC<PromptDetailModalProps> = ({
     };
   }, [isOpen]);
 
+  // Always land on the prompt tab when a new prompt is opened
+  useEffect(() => {
+    if (isOpen) setActiveTab('prompt');
+  }, [isOpen, prompt?.id]);
+
   if (!isOpen || !prompt) return null;
 
+  const primaryTool = prompt.targetTools[0] ?? 'your AI coding tool';
+
   const handleCopy = () => {
-    onCopyPrompt(prompt);
+    navigator.clipboard.writeText(prompt.fullPrompt);
+    onCopyPrompt?.(prompt);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
 
+  const tabs: { value: DetailTab; label: string; icon: React.ComponentType<{ className?: string }>; count?: number }[] = [
+    { value: 'prompt', label: 'System prompt', icon: Code2 },
+    { value: 'usage', label: 'Usage', icon: BookOpen },
+    { value: 'components', label: 'Components', icon: Layers, count: prompt.componentsIncluded.length },
+  ];
+
+  const specs: { label: string; value: React.ReactNode }[] = [
+    { label: 'Category', value: prompt.category },
+    { label: 'Design style', value: prompt.style },
+    { label: 'Colour theme', value: prompt.colorTheme },
+    { label: 'Published', value: prompt.createdAt },
+    { label: 'Length', value: `${prompt.fullPrompt.length.toLocaleString()} chars` },
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 bg-zinc-950 text-zinc-100 overflow-y-auto flex flex-col animate-in fade-in duration-200">
-      {/* Top Fixed Header Bar */}
-      <header className="sticky top-0 z-40 bg-zinc-950/90 backdrop-blur-md border-b border-zinc-800/80 px-4 sm:px-8 py-3.5 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onClose}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer group"
-          >
-            <ArrowLeft className="w-4 h-4 text-zinc-400 group-hover:-translate-x-0.5 transition-transform" />
-            <span>Back to Prompts</span>
-            <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono text-zinc-500 bg-zinc-950 border border-zinc-800 rounded">
-              Esc
-            </kbd>
-          </button>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={prompt.title}
+      className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-background animate-fade-in"
+    >
+      {/* Top bar */}
+      <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur-xl">
+        <div className="container-page flex h-14 items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Back</span>
+            </Button>
 
-          <div className="hidden md:flex items-center gap-2 text-xs text-zinc-500 font-mono">
-            <span>/</span>
-            <span className="text-zinc-400 font-medium">{prompt.category}</span>
-            <span>/</span>
-            <span className="text-zinc-300 truncate max-w-[200px]">{prompt.title}</span>
+            <nav
+              aria-label="Breadcrumb"
+              className="hidden min-w-0 items-center gap-2 font-mono text-xs text-subtle-foreground md:flex"
+            >
+              <span>{prompt.category}</span>
+              <span aria-hidden="true">/</span>
+              <span className="truncate text-muted-foreground">{prompt.title}</span>
+            </nav>
           </div>
-        </div>
 
-        {/* Header Action Buttons */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            onClick={() => onToggleFavorite(prompt.id)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-              isFavorite
-                ? 'bg-rose-500/10 border-rose-500/30 text-rose-400 hover:bg-rose-500/20'
-                : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
-            }`}
-          >
-            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-rose-500 text-rose-500' : ''}`} />
-            <span className="hidden sm:inline">{isFavorite ? 'Favorited' : 'Favorite'}</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onToggleFavorite(prompt.id)}
+              aria-pressed={isFavorite}
+            >
+              <Heart className={cn('h-3.5 w-3.5', isFavorite && 'fill-current')} />
+              <span className="hidden sm:inline">{isFavorite ? 'Saved' : 'Save'}</span>
+            </Button>
 
-          {/* Large Copy CTA in Header */}
-          <button
-            onClick={handleCopy}
-            className={`flex items-center gap-2 px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-lg cursor-pointer ${
-              copied
-                ? 'bg-emerald-500 text-zinc-950 shadow-emerald-500/20'
-                : 'bg-cyan-400 hover:bg-cyan-300 text-zinc-950 shadow-cyan-400/20 hover:scale-[1.02]'
-            }`}
-          >
-            {copied ? (
-              <>
-                <Check className="w-4 h-4" />
-                <span>Prompt Copied!</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-4 h-4" />
-                <span>Copy Prompt</span>
-              </>
-            )}
-          </button>
+            <Button variant="primary" size="sm" onClick={handleCopy}>
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              <span>{copied ? 'Copied' : 'Copy prompt'}</span>
+            </Button>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition-all cursor-pointer"
-            title="Close view"
-          >
-            <X className="w-4 h-4" />
-          </button>
+            <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
-      {/* Main Full-Screen View Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 flex flex-col gap-8">
-        
-        {/* Title & Metadata Hero Header */}
-        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 pb-6 border-b border-zinc-800/80">
-          <div className="space-y-3 max-w-3xl">
-            {/* Category & Tags Badges */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono font-semibold">
-                {prompt.category}
-              </span>
-              <span className="px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-mono flex items-center gap-1.5">
-                <Cpu className="w-3.5 h-3.5 text-blue-400" />
-                Optimized for {prompt.targetTool}
-              </span>
-              <span className="px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 text-xs font-mono">
-                {prompt.complexity || 'Intermediate'} Complexity
-              </span>
-            </div>
-
-            {/* Prompt Title */}
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
-              {prompt.title}
-            </h1>
-
-            {/* Description */}
-            <p className="text-sm sm:text-base text-zinc-400 leading-relaxed">
-              {prompt.description}
-            </p>
+      <div className="container-page flex-1 py-8 sm:py-10">
+        {/* Title block */}
+        <div className="border-b border-border pb-6">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge variant="outline" className="font-mono uppercase tracking-wide">
+              {prompt.category}
+            </Badge>
+            {prompt.targetTools.map((tool) => (
+              <Badge key={tool} variant="neutral">{tool}</Badge>
+            ))}
           </div>
 
-          {/* Large Action Box & Stats */}
-          <div className="flex flex-col sm:flex-row lg:flex-col items-stretch gap-3 min-w-[260px] bg-zinc-900/60 p-4 rounded-2xl border border-zinc-800">
-            <button
-              onClick={handleCopy}
-              className={`w-full flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-xl text-sm font-bold transition-all shadow-xl cursor-pointer ${
-                copied
-                  ? 'bg-emerald-500 text-zinc-950 shadow-emerald-500/20'
-                  : 'bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-zinc-950 shadow-cyan-500/20 hover:scale-[1.01]'
-              }`}
-            >
-              {copied ? (
-                <>
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span>Copied to Clipboard!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-5 h-5" />
-                  <span>Copy System Prompt</span>
-                </>
-              )}
-            </button>
+          <h1 className="mt-4 max-w-3xl text-balance text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-3xl">
+            {prompt.title}
+          </h1>
+          <p className="mt-2.5 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+            {prompt.description}
+          </p>
 
-            <div className="flex items-center justify-around py-2 px-3 bg-zinc-950/80 rounded-xl border border-zinc-800/80 text-xs font-mono text-zinc-400">
-              <div className="flex items-center gap-1.5">
-                <Copy className="w-3.5 h-3.5 text-cyan-400" />
-                <span><strong className="text-zinc-200">{prompt.copies.toLocaleString()}</strong> copies</span>
-              </div>
-              <span className="text-zinc-700">|</span>
-              <div className="flex items-center gap-1.5">
-                <Heart className="w-3.5 h-3.5 text-rose-400" />
-                <span><strong className="text-zinc-200">{prompt.likes.toLocaleString()}</strong> likes</span>
-              </div>
-            </div>
+          <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 font-mono text-xs text-subtle-foreground">
+            <span>{prompt.author.handle}</span>
+            <span>{prompt.copies.toLocaleString()} copies</span>
+            <span>{prompt.likes.toLocaleString()} likes</span>
           </div>
         </div>
 
-        {/* Content Layout Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Main Left Section (Prompt Code & Details) */}
-          <div className="lg:col-span-8 flex flex-col gap-6">
-            
-            {/* Navigation Tabs */}
-            <div className="flex items-center gap-2 border-b border-zinc-800/80 pb-3">
-              <button
-                onClick={() => setActiveTab('prompt')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'prompt'
-                    ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
-                }`}
-              >
-                <Code2 className="w-4 h-4" />
-                <span>Full System Prompt</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('instructions')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'instructions'
-                    ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
-                }`}
-              >
-                <BookOpen className="w-4 h-4" />
-                <span>Usage Tips</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('components')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'components'
-                    ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
-                }`}
-              >
-                <Layers className="w-4 h-4" />
-                <span>Included Modules ({prompt.tags?.length || 0})</span>
-              </button>
+        <div className="mt-6 grid gap-6 lg:grid-cols-12 lg:gap-8">
+          {/* Main column */}
+          <div className="min-w-0 lg:col-span-8">
+            {/* Tabs */}
+            <div
+              role="tablist"
+              aria-label="Prompt details"
+              className="flex items-center gap-1 overflow-x-auto border-b border-border scrollbar-none"
+            >
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.value;
+                return (
+                  <button
+                    key={tab.value}
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => setActiveTab(tab.value)}
+                    className={cn(
+                      'relative flex shrink-0 cursor-pointer items-center gap-2 px-3 py-2.5 text-[13px] font-medium',
+                      'transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    <span>{tab.label}</span>
+                    {typeof tab.count === 'number' && (
+                      <span className="font-mono text-[11px] text-subtle-foreground">{tab.count}</span>
+                    )}
+                    {isActive && (
+                      <span className="absolute inset-x-0 -bottom-px h-px bg-foreground" aria-hidden="true" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Prompt Code Block View */}
-            {activeTab === 'prompt' && (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between px-4 py-2 bg-zinc-900/90 rounded-t-2xl border border-zinc-800 border-b-0 text-xs font-mono text-zinc-400">
-                  <div className="flex items-center gap-2">
-                    <Terminal className="w-4 h-4 text-cyan-400" />
-                    <span>system-prompt.md</span>
-                  </div>
-                  <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? 'Copied' : 'Copy All'}</span>
-                  </button>
-                </div>
-
-                <div className="relative group bg-zinc-900/60 rounded-b-2xl border border-zinc-800 p-5 sm:p-6 font-mono text-xs sm:text-sm text-zinc-200 leading-relaxed overflow-x-auto whitespace-pre-wrap select-all shadow-inner max-h-[600px] overflow-y-auto">
-                  {prompt.promptText}
-                </div>
-              </div>
-            )}
-
-            {/* Usage Tips Tab */}
-            {activeTab === 'instructions' && (
-              <div className="bg-zinc-900/60 rounded-2xl border border-zinc-800 p-6 space-y-4">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Wand2 className="w-4 h-4 text-cyan-400" />
-                  Recommended Prompting Workflow
-                </h3>
-
-                <ol className="list-decimal list-inside text-xs sm:text-sm text-zinc-300 space-y-3 leading-relaxed">
-                  <li>
-                    Copy the system prompt using the <strong className="text-cyan-400">Copy Prompt</strong> button above.
-                  </li>
-                  <li>
-                    Open your AI coding tool of choice (<strong className="text-white">{prompt.targetTool}</strong>).
-                  </li>
-                  <li>
-                    Paste the system prompt into your chat window or custom instructions section before describing your specific features.
-                  </li>
-                  <li>
-                    Customize placeholder variables (such as theme color, branding name, or endpoint URLs) to match your requirements.
-                  </li>
-                </ol>
-
-                <div className="mt-4 p-4 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-xs text-cyan-300">
-                  💡 <strong>Pro Tip:</strong> For best results in {prompt.targetTool}, ask the AI to generate component files individually rather than creating a single massive file.
-                </div>
-              </div>
-            )}
-
-            {/* Included Modules Tab */}
-            {activeTab === 'components' && (
-              <div className="bg-zinc-900/60 rounded-2xl border border-zinc-800 p-6 space-y-4">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-cyan-400" />
-                  Key Components & Technical Specs
-                </h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {prompt.tags.map((tag, idx) => (
-                    <div key={idx} className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center gap-2 text-xs text-zinc-300">
-                      <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                      <span>{tag}</span>
+            {/* Panels */}
+            <div className="mt-5">
+              {activeTab === 'prompt' && (
+                <div className="overflow-hidden rounded-lg border border-border">
+                  <div className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 py-2.5">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Terminal className="h-3.5 w-3.5 shrink-0 text-subtle-foreground" />
+                      <span className="truncate font-mono text-[11px] uppercase tracking-wider text-subtle-foreground">
+                        system-prompt.md
+                      </span>
                     </div>
-                  ))}
+                    <button
+                      onClick={handleCopy}
+                      className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+                      <span>{copied ? 'Copied' : 'Copy all'}</span>
+                    </button>
+                  </div>
+                  <pre className="max-h-[32rem] select-all overflow-auto bg-surface-secondary p-4 font-mono text-xs leading-relaxed text-foreground sm:p-5 sm:text-[13px]">
+                    {prompt.fullPrompt}
+                  </pre>
                 </div>
-              </div>
-            )}
+              )}
+
+              {activeTab === 'usage' && (
+                <div className="rounded-lg border border-border bg-surface p-5 sm:p-6">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Wand2 className="h-4 w-4 text-subtle-foreground" />
+                    Recommended workflow
+                  </h3>
+
+                  <ol className="mt-4 space-y-3.5">
+                    {[
+                      <>Copy the system prompt with the <strong className="font-medium text-foreground">Copy prompt</strong> button above.</>,
+                      <>Open your AI coding tool of choice — this prompt targets <strong className="font-medium text-foreground">{prompt.targetTools.join(', ')}</strong>.</>,
+                      <>Paste it into the chat or custom-instructions field before describing your specific features.</>,
+                      <>Adjust placeholders such as theme colours, brand name or endpoint URLs to match your project.</>,
+                    ].map((step, index) => (
+                      <li key={index} className="flex gap-3 text-sm leading-relaxed text-muted-foreground">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border bg-surface-secondary font-mono text-[11px] text-subtle-foreground">
+                          {index + 1}
+                        </span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+
+                  <Well className="mt-5 p-3.5">
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      <strong className="font-medium text-foreground">Tip</strong> — for best results in{' '}
+                      {primaryTool}, ask for component files one at a time rather than a single large file.
+                    </p>
+                  </Well>
+                </div>
+              )}
+
+              {activeTab === 'components' && (
+                <div className="rounded-lg border border-border bg-surface p-5 sm:p-6">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Layers className="h-4 w-4 text-subtle-foreground" />
+                    Included components
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Modules this prompt asks the model to produce.
+                  </p>
+
+                  <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {prompt.componentsIncluded.map((component, index) => (
+                      <li
+                        key={index}
+                        className="flex items-center gap-2 rounded-md border border-border bg-surface-secondary px-3 py-2 text-xs text-muted-foreground"
+                      >
+                        <Sparkles className="h-3.5 w-3.5 shrink-0 text-subtle-foreground" />
+                        <span className="truncate">{component}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Right Sidebar Metadata */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
-            
-            {/* Tech Specs Card */}
-            <div className="bg-zinc-900/60 rounded-2xl border border-zinc-800 p-5 space-y-4">
-              <h3 className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-cyan-400" />
-                Prompt Specifications
-              </h3>
-
-              <div className="space-y-3 text-xs font-mono divide-y divide-zinc-800/80">
-                <div className="pt-2 flex items-center justify-between">
-                  <span className="text-zinc-500">Target Tool</span>
-                  <span className="text-cyan-400 font-bold">{prompt.targetTool}</span>
-                </div>
-
-                <div className="pt-3 flex items-center justify-between">
-                  <span className="text-zinc-500">Category</span>
-                  <span className="text-zinc-200">{prompt.category}</span>
-                </div>
-
-                <div className="pt-3 flex items-center justify-between">
-                  <span className="text-zinc-500">Tech Stack</span>
-                  <span className="text-zinc-200">{prompt.techStack || 'React, Tailwind CSS'}</span>
-                </div>
-
-                <div className="pt-3 flex items-center justify-between">
-                  <span className="text-zinc-500">Complexity</span>
-                  <span className="text-zinc-200">{prompt.complexity || 'Intermediate'}</span>
-                </div>
-
-                <div className="pt-3 flex items-center justify-between">
-                  <span className="text-zinc-500">Total Length</span>
-                  <span className="text-zinc-200">{prompt.promptText.length.toLocaleString()} characters</span>
-                </div>
+          {/* Sidebar */}
+          <aside className="min-w-0 space-y-5 lg:col-span-4">
+            <div className="rounded-lg border border-border bg-surface">
+              <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+                <Sliders className="h-3.5 w-3.5 text-subtle-foreground" />
+                <h3 className="font-mono text-[11px] uppercase tracking-wider text-subtle-foreground">
+                  Specifications
+                </h3>
               </div>
+              <dl className="divide-y divide-border">
+                {specs.map((spec) => (
+                  <div key={spec.label} className="flex items-start justify-between gap-4 px-4 py-2.5">
+                    <dt className="text-xs text-muted-foreground">{spec.label}</dt>
+                    <dd className="text-right text-xs font-medium text-foreground">{spec.value}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
 
-            {/* Tags Cloud */}
-            <div className="bg-zinc-900/60 rounded-2xl border border-zinc-800 p-5 space-y-3">
-              <h3 className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider">
-                Tags & Features
+            <div className="rounded-lg border border-border bg-surface p-4">
+              <h3 className="font-mono text-[11px] uppercase tracking-wider text-subtle-foreground">
+                Tech stack
               </h3>
-              <div className="flex flex-wrap gap-1.5">
-                {prompt.tags.map((tag, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2.5 py-1 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] font-mono text-zinc-400"
-                  >
-                    #{tag}
-                  </span>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {prompt.techStack.map((tech) => (
+                  <Badge key={tech} variant="outline" className="font-mono">{tech}</Badge>
                 ))}
               </div>
             </div>
 
-            {/* Quick Copy Banner */}
-            <div className="bg-gradient-to-br from-cyan-950/40 via-zinc-900 to-blue-950/40 rounded-2xl border border-cyan-500/20 p-5 space-y-3 text-center">
-              <Sparkles className="w-6 h-6 text-cyan-400 mx-auto" />
-              <h4 className="text-sm font-bold text-white">Ready to build?</h4>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Copy this prompt and paste it directly into {prompt.targetTool} to generate this component.
+            <div className="rounded-lg border border-border bg-surface-secondary p-4">
+              <h3 className="text-sm font-semibold text-foreground">Ready to build?</h3>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                Copy this prompt straight into {primaryTool}, or start from it in the builder.
               </p>
-              <button
-                onClick={handleCopy}
-                className="w-full py-2.5 px-4 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-zinc-950 font-bold text-xs transition-all shadow-md cursor-pointer"
-              >
-                {copied ? 'Copied!' : 'Copy Prompt Code'}
-              </button>
+              <div className="mt-4 space-y-2">
+                <Button variant="primary" size="md" onClick={handleCopy} className="w-full">
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  <span>{copied ? 'Copied' : 'Copy prompt'}</span>
+                </Button>
+                {onOpenBuilderWithPrompt && (
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => {
+                      onOpenBuilderWithPrompt(prompt);
+                      onClose();
+                    }}
+                    className="w-full"
+                  >
+                    <Wand2 className="h-3.5 w-3.5" />
+                    <span>Open builder</span>
+                  </Button>
+                )}
+              </div>
             </div>
-
-          </div>
-
+          </aside>
         </div>
-
-      </main>
+      </div>
     </div>
   );
 };

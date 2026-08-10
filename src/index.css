@@ -1,50 +1,344 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   VibePrompt design system
+   --------------------------------------------------------------------------
+   Single source of truth for colour, radius, elevation and typography.
+   Components must consume the semantic tokens below (bg-surface, text-muted-
+   foreground, border-border, ...) and must NOT hardcode palette classes such
+   as bg-zinc-900 or text-cyan-400.
+
+   Theme switching is driven by the `.dark` class on <html>, applied by
+   src/contexts/ThemeContext.tsx (and by the pre-paint script in index.html).
+   ========================================================================== */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* --------------------------------------------------------------------------
+   LIGHT THEME — clean, bright, spacious. Page is white, sections step down
+   into light grey, cards come back up to white so they read as raised.
+   -------------------------------------------------------------------------- */
+:root {
+  /* Surfaces */
+  --background: #ffffff;
+  --surface: #ffffff;              /* cards, popovers, modals */
+  --surface-secondary: #f6f6f7;    /* alternating sections, table headers */
+  --surface-tertiary: #efeff1;     /* wells, code blocks, inert chips */
+  --hover: #f3f3f5;                /* hover wash on neutral controls */
+  --active: #e9e9ec;               /* pressed / selected wash */
+  --overlay: rgb(9 9 11 / 0.55);   /* modal scrim */
+
+  /* Text */
+  --foreground: #18181b;           /* headings, primary copy */
+  --muted-foreground: #52525b;     /* secondary copy, descriptions */
+  --subtle-foreground: #6e6e78;    /* metadata, counters, placeholders */
+
+  /* Lines & inputs */
+  --border: #e5e5e8;               /* default hairline */
+  --border-strong: #d3d3d8;        /* emphasised dividers, hovered inputs */
+  --input: #ffffff;                /* input field background */
+  --ring: #2f5fe0;                 /* focus ring */
+
+  /* Primary action — deliberately neutral, not a colour statement */
+  --primary: #18181b;
+  --primary-foreground: #fafafa;
+  --primary-hover: #27272a;
+
+  /* The single accent. Used for focus, selection and links only. */
+  --accent: #2f5fe0;
+  --accent-foreground: #ffffff;
+  --accent-muted: rgb(47 95 224 / 0.08);
+  --accent-border: rgb(47 95 224 / 0.28);
+
+  /* Status — muted, informational, never decorative */
+  --success: #157f52;
+  --success-muted: rgb(21 127 82 / 0.09);
+  --destructive: #b4231a;
+  --destructive-muted: rgb(180 35 26 / 0.08);
+
+  /* Elevation — restrained; only popovers and modals lift off the page */
+  --elevation-popover: 0 1px 2px rgb(9 9 11 / 0.04), 0 8px 24px -8px rgb(9 9 11 / 0.14);
+  --elevation-modal: 0 1px 2px rgb(9 9 11 / 0.06), 0 24px 56px -16px rgb(9 9 11 / 0.22);
+
+  color-scheme: light;
+}
+
+/* --------------------------------------------------------------------------
+   DARK THEME — designed independently, not an inversion. Near-black page,
+   charcoal sections, cards lifted one step so hierarchy survives without
+   borders doing all the work. Text tops out at off-white to avoid glare.
+   -------------------------------------------------------------------------- */
+.dark {
+  /* Surfaces */
+  --background: #09090b;
+  --surface: #111113;
+  --surface-secondary: #16161a;
+  --surface-tertiary: #1c1c20;
+  --hover: #1f1f24;
+  --active: #26262c;
+  --overlay: rgb(0 0 0 / 0.7);
+
+  /* Text */
+  --foreground: #f4f4f5;
+  --muted-foreground: #a0a0ab;
+  --subtle-foreground: #8b8b98;
+
+  /* Lines & inputs */
+  --border: #232327;
+  --border-strong: #32323a;
+  --input: #16161a;
+  --ring: #7f9cf5;
+
+  /* Primary action inverts to near-white for the same visual weight */
+  --primary: #fafafa;
+  --primary-foreground: #111113;
+  --primary-hover: #e4e4e7;
+
+  --accent: #8ba7f7;
+  --accent-foreground: #0b1020;
+  --accent-muted: rgb(139 167 247 / 0.12);
+  --accent-border: rgb(139 167 247 / 0.32);
+
+  --success: #58c896;
+  --success-muted: rgb(88 200 150 / 0.12);
+  --destructive: #ef7a6f;
+  --destructive-muted: rgb(239 122 111 / 0.12);
+
+  --elevation-popover: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  --elevation-modal: 0 1px 2px rgb(0 0 0 / 0.5), 0 24px 56px -16px rgb(0 0 0 / 0.7);
+
+  color-scheme: dark;
+}
+
+/* --------------------------------------------------------------------------
+   Token → Tailwind utility mapping. `bg-surface`, `text-muted-foreground`,
+   `border-border`, `ring-ring`, `shadow-popover`, `rounded-lg`, `font-mono`…
+   -------------------------------------------------------------------------- */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-tertiary: var(--surface-tertiary);
+  --color-hover: var(--hover);
+  --color-active: var(--active);
+  --color-overlay: var(--overlay);
+
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-muted: var(--accent-muted);
+  --color-accent-border: var(--accent-border);
+
+  --color-success: var(--success);
+  --color-success-muted: var(--success-muted);
+  --color-destructive: var(--destructive);
+  --color-destructive-muted: var(--destructive-muted);
+
+  /* Type */
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Radius — 8px is the system default; nothing is a pill except status dots */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+
+  --shadow-popover: var(--elevation-popover);
+  --shadow-modal: var(--elevation-modal);
+}
+
+/* --------------------------------------------------------------------------
+   Base layer
+   -------------------------------------------------------------------------- */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Theme transition: colours cross-fade, everything else stays instant so
+     layout never appears to lag behind the toggle. */
+  body,
+  body * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: 140ms;
+    transition-timing-function: ease-out;
+  }
+
+  /* Never animate colour while the user is dragging/scrolling a control, and
+     respect reduced-motion preferences. */
+  @media (prefers-reduced-motion: reduce) {
+    body,
+    body * {
+      transition-duration: 0ms !important;
+      animation-duration: 0ms !important;
+    }
+  }
+
+  ::selection {
+    background-color: var(--accent-muted);
+    color: var(--foreground);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Native controls follow the theme (select dropdown lists, date pickers…) */
+  select option {
+    background-color: var(--surface);
+    color: var(--foreground);
+  }
+
+  /* Scrollbars — thin and neutral in both themes */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--border-strong);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--subtle-foreground);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Utilities
+   -------------------------------------------------------------------------- */
 @layer utilities {
-  .font-serif-italic {
-    font-family: 'Instrument Serif', Georgia, serif;
-    font-style: italic;
+  /* Page gutter + max width. Every top-level section uses this so columns
+     line up across the whole app. */
+  .container-page {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 80rem; /* 1280px */
+    padding-inline: 1rem;
   }
-  .font-sans-display {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  @media (min-width: 640px) {
+    .container-page {
+      padding-inline: 1.5rem;
+    }
   }
-  .font-mono-code {
-    font-family: 'JetBrains Mono', monospace;
+
+  @media (min-width: 1024px) {
+    .container-page {
+      padding-inline: 2rem;
+    }
+  }
+
+  /* Narrower measure for reading-heavy views (builder, forms, prompt body) */
+  .container-prose {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 60rem;
+    padding-inline: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .container-prose {
+      padding-inline: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container-prose {
+      padding-inline: 2rem;
+    }
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hairline grid used sparingly as page texture behind the hero */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, var(--border) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 25%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 25%, transparent 75%);
+  }
+
+  .text-balance {
+    text-wrap: balance;
   }
 }
 
-/* Custom background mesh and glow effects */
-.bg-supaste-gradient {
-  background: linear-gradient(135deg, #0e1e4d 0%, #1a56db 38%, #1f6bff 70%, #00d2ff 100%);
-}
-
-.bg-glass-card {
-  background: rgba(13, 19, 38, 0.75);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-}
-
-.border-glass {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-.shadow-glass {
-  box-shadow: 0 30px 100px -20px rgba(0, 0, 0, 0.7), 0 0 40px rgba(0, 210, 255, 0.15);
-}
-
-/* Auth dropdown animations */
+/* --------------------------------------------------------------------------
+   Motion primitives — short, subtle, single-purpose
+   -------------------------------------------------------------------------- */
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-@keyframes slide-in-from-top-2 {
-  from { transform: translateY(-8px); }
-  to { transform: translateY(0); }
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-in {
-  animation: fade-in 0.2s ease-out, slide-in-from-top-2 0.2s ease-out;
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.98) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+.animate-fade-in {
+  animation: fade-in 140ms ease-out;
+}
 
+.animate-fade-in-up {
+  animation: fade-in-up 160ms ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}

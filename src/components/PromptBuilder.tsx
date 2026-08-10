@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
-import { Sparkles, Copy, Check, Save, Wand2, Terminal, Layers, Palette, Cpu, Play, X } from 'lucide-react';
+import { Copy, Check, Save, Wand2, Terminal, Play, X, AlertTriangle } from 'lucide-react';
 import { DesignStyle, TechStackItem, TargetTool, UIPrompt, PromptBuilderConfig } from '../types';
+import {
+  Button,
+  Chip,
+  ErrorNotice,
+  FieldLabel,
+  SectionHeader,
+  Select,
+  Textarea,
+  Well,
+} from './ui/primitives';
 
 interface PromptBuilderProps {
   onSavePrompt: (prompt: UIPrompt) => void;
@@ -72,6 +82,7 @@ export const PromptBuilder: React.FC<PromptBuilderProps> = ({ onSavePrompt, onPr
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [enhancedTextOverride, setEnhancedTextOverride] = useState<string | null>(null);
+  const [refineNotice, setRefineNotice] = useState<string | null>(null);
 
   const defaultPromptText = `Build a modern, dark-themed ${config.interfaceType} interface in a ${config.designStyle} style tailored for deployment with ${config.targetTool}.
 
@@ -84,8 +95,14 @@ Deliver a single, clean TypeScript React component with production-ready Tailwin
 
   const activePromptText = enhancedTextOverride || defaultPromptText;
 
-  const handleToggleTech = (tech: TechStackItem) => {
+  /** Any config edit invalidates a previous AI refinement. */
+  const resetRefinement = () => {
     setEnhancedTextOverride(null);
+    setRefineNotice(null);
+  };
+
+  const handleToggleTech = (tech: TechStackItem) => {
+    resetRefinement();
     setConfig((prev) => ({
       ...prev,
       techStack: prev.techStack.includes(tech)
@@ -95,7 +112,7 @@ Deliver a single, clean TypeScript React component with production-ready Tailwin
   };
 
   const handleToggleComponent = (comp: string) => {
-    setEnhancedTextOverride(null);
+    resetRefinement();
     setConfig((prev) => ({
       ...prev,
       components: prev.components.includes(comp)
@@ -112,6 +129,7 @@ Deliver a single, clean TypeScript React component with production-ready Tailwin
 
   const handleEnhanceWithAI = async () => {
     setIsEnhancing(true);
+    setRefineNotice(null);
     try {
       const response = await fetch('/api/enhance-prompt', {
         method: 'POST',
@@ -134,9 +152,11 @@ Theme: ${config.colorTheme}.
 Modules: ${config.components.join(', ')}.
 Custom Directives: ${config.customInstructions}`
         );
+        setRefineNotice('AI refinement is unavailable, so a local template was generated instead.');
       }
     } catch (err) {
       console.error(err);
+      setRefineNotice('Could not reach the refinement service. Check your connection and try again.');
     } finally {
       setIsEnhancing(false);
     }
@@ -171,220 +191,205 @@ Custom Directives: ${config.customInstructions}`
   };
 
   return (
-    <section id="builder" className="py-10 px-4 sm:px-6 lg:px-8 bg-zinc-950">
-      <div className="mx-auto max-w-5xl">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8 pb-4 border-b border-zinc-800/80">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
-              <Wand2 className="h-6 w-6 text-cyan-400" />
-              Prompt Builder
-            </h2>
-            <p className="text-zinc-400 text-xs mt-1">
-              Configure specifications to generate a tailored system prompt.
-            </p>
-          </div>
-          {onBackToMain && (
-            <button
-              onClick={onBackToMain}
-              className="p-2.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white transition-all shadow-lg flex items-center gap-1.5 text-xs font-semibold cursor-pointer group"
-              title="Close and go back to main page"
-            >
-              <span className="hidden sm:inline text-zinc-300 group-hover:text-white">Main Page</span>
-              <X className="h-4 w-4 text-cyan-400 group-hover:scale-110 transition-transform" />
-            </button>
-          )}
-        </div>
+    <section id="builder" className="bg-background py-10 sm:py-12">
+      <div className="container-page">
+        <SectionHeader
+          title="Prompt builder"
+          description="Configure the specification and generate a tailored system prompt."
+          actions={
+            onBackToMain && (
+              <Button variant="ghost" size="sm" onClick={onBackToMain} title="Back to the library">
+                <span>Back to library</span>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            )
+          }
+        />
 
-        {/* Builder Grid */}
-        <div className="grid lg:grid-cols-12 gap-6">
-          
-          {/* Controls Column */}
-          <div className="lg:col-span-6 space-y-5 bg-zinc-900/40 p-5 rounded-2xl border border-zinc-800/80">
-            
-            {/* Target Tool */}
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-2 flex items-center gap-1.5">
-                <Cpu className="h-3.5 w-3.5 text-red-400" /> Target Tool
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {TARGET_TOOLS.map((tool) => (
-                  <button
-                    key={tool}
-                    onClick={() => {
-                      setEnhancedTextOverride(null);
-                      setConfig({ ...config, targetTool: tool });
+        <div className="mt-6 grid gap-5 lg:grid-cols-12">
+          {/* ---------------- Configuration ---------------- */}
+          <div className="lg:col-span-7">
+            <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+              {/* Target tool */}
+              <div className="p-4 sm:p-5">
+                <FieldLabel>Target tool</FieldLabel>
+                <div className="flex flex-wrap gap-1.5">
+                  {TARGET_TOOLS.map((tool) => (
+                    <Chip
+                      key={tool}
+                      selected={config.targetTool === tool}
+                      onClick={() => {
+                        resetRefinement();
+                        setConfig({ ...config, targetTool: tool });
+                      }}
+                    >
+                      {tool}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+
+              {/* Interface + style + palette */}
+              <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
+                <div>
+                  <FieldLabel>Interface</FieldLabel>
+                  <Select
+                    value={config.interfaceType}
+                    onChange={(e) => {
+                      resetRefinement();
+                      setConfig({ ...config, interfaceType: e.target.value });
                     }}
-                    className={`px-3 py-1 rounded text-xs font-semibold transition-colors ${
-                      config.targetTool === tool
-                        ? 'bg-red-600 text-white'
-                        : 'bg-zinc-800 text-zinc-400 hover:text-white'
-                    }`}
+                    aria-label="Interface type"
                   >
-                    {tool}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Interface Type & Style */}
-            <div className="grid sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5 flex items-center gap-1.5">
-                  <Layers className="h-3.5 w-3.5 text-red-400" /> Interface
-                </label>
-                <select
-                  value={config.interfaceType}
-                  onChange={(e) => {
-                    setEnhancedTextOverride(null);
-                    setConfig({ ...config, interfaceType: e.target.value });
-                  }}
-                  className="w-full rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 text-xs text-zinc-200 focus:border-red-500 focus:outline-none"
-                >
-                  {INTERFACE_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-1.5 flex items-center gap-1.5">
-                  <Palette className="h-3.5 w-3.5 text-red-400" /> Design Style
-                </label>
-                <select
-                  value={config.designStyle}
-                  onChange={(e) => {
-                    setEnhancedTextOverride(null);
-                    setConfig({ ...config, designStyle: e.target.value as DesignStyle });
-                  }}
-                  className="w-full rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 text-xs text-zinc-200 focus:border-red-500 focus:outline-none"
-                >
-                  {DESIGN_STYLES.map((style) => (
-                    <option key={style} value={style}>
-                      {style}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Tech Stack */}
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
-                Tech Stack
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {TECH_STACK_OPTIONS.map((tech) => {
-                  const isChecked = config.techStack.includes(tech);
-                  return (
-                    <button
-                      key={tech}
-                      type="button"
-                      onClick={() => handleToggleTech(tech)}
-                      className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${
-                        isChecked
-                          ? 'bg-zinc-800 text-red-300 border-red-500/80'
-                          : 'bg-zinc-950 text-zinc-500 border-zinc-800 hover:text-zinc-300'
-                      }`}
-                    >
-                      {isChecked ? '✓ ' : '+ '} {tech}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Components */}
-            <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
-                Components
-              </label>
-              <div className="grid grid-cols-2 gap-1.5">
-                {COMPONENT_OPTIONS.map((comp) => {
-                  const isChecked = config.components.includes(comp);
-                  return (
-                    <button
-                      key={comp}
-                      type="button"
-                      onClick={() => handleToggleComponent(comp)}
-                      className={`text-left px-2 py-1 rounded text-[11px] font-medium border transition-colors truncate ${
-                        isChecked
-                          ? 'bg-red-950/40 text-red-200 border-red-500/60'
-                          : 'bg-zinc-950 text-zinc-500 border-zinc-800 hover:text-zinc-300'
-                      }`}
-                    >
-                      {isChecked ? '✓ ' : '+ '} {comp}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-          </div>
-
-          {/* Output Preview Column */}
-          <div className="lg:col-span-6 flex flex-col justify-between bg-zinc-950 border border-zinc-800 rounded-2xl p-5 shadow-lg">
-            <div>
-              <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80 mb-3">
-                <div className="flex items-center gap-2">
-                  <Terminal className="h-4 w-4 text-red-400" />
-                  <span className="text-xs font-bold text-zinc-300 font-mono uppercase">
-                    System Prompt
-                  </span>
+                    {INTERFACE_TYPES.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </Select>
                 </div>
 
-                <button
-                  onClick={handleEnhanceWithAI}
-                  disabled={isEnhancing}
-                  className="flex items-center gap-1 rounded bg-red-900/30 border border-red-500/30 px-2 py-1 text-[11px] text-red-300 hover:bg-red-900/50 transition-colors"
-                >
-                  <Wand2 className={`h-3 w-3 ${isEnhancing ? 'animate-spin' : ''}`} />
-                  <span>{isEnhancing ? 'Refining...' : 'AI Refine'}</span>
-                </button>
+                <div>
+                  <FieldLabel>Design style</FieldLabel>
+                  <Select
+                    value={config.designStyle}
+                    onChange={(e) => {
+                      resetRefinement();
+                      setConfig({ ...config, designStyle: e.target.value as DesignStyle });
+                    }}
+                    aria-label="Design style"
+                  >
+                    {DESIGN_STYLES.map((style) => (
+                      <option key={style} value={style}>{style}</option>
+                    ))}
+                  </Select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <FieldLabel>Colour theme</FieldLabel>
+                  <Select
+                    value={config.colorTheme}
+                    onChange={(e) => {
+                      resetRefinement();
+                      setConfig({ ...config, colorTheme: e.target.value });
+                    }}
+                    aria-label="Colour theme"
+                  >
+                    {COLOR_THEMES.map((theme) => (
+                      <option key={theme} value={theme}>{theme}</option>
+                    ))}
+                  </Select>
+                </div>
               </div>
 
-              <div className="rounded-xl bg-zinc-900/90 border border-zinc-800 p-3.5 max-h-72 overflow-y-auto">
-                <pre className="text-zinc-300 font-mono text-xs leading-relaxed whitespace-pre-wrap">
-                  {activePromptText}
-                </pre>
+              {/* Tech stack */}
+              <div className="p-4 sm:p-5">
+                <FieldLabel>Tech stack</FieldLabel>
+                <div className="flex flex-wrap gap-1.5">
+                  {TECH_STACK_OPTIONS.map((tech) => (
+                    <Chip
+                      key={tech}
+                      tone="soft"
+                      selected={config.techStack.includes(tech)}
+                      onClick={() => handleToggleTech(tech)}
+                    >
+                      {config.techStack.includes(tech) && <Check className="h-3 w-3" />}
+                      {tech}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+
+              {/* Components */}
+              <div className="p-4 sm:p-5">
+                <FieldLabel>Components</FieldLabel>
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  {COMPONENT_OPTIONS.map((comp) => (
+                    <Chip
+                      key={comp}
+                      tone="soft"
+                      selected={config.components.includes(comp)}
+                      onClick={() => handleToggleComponent(comp)}
+                      className="justify-start overflow-hidden"
+                    >
+                      {config.components.includes(comp) && <Check className="h-3 w-3 shrink-0" />}
+                      <span className="truncate">{comp}</span>
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+
+              {/* Directives */}
+              <div className="p-4 sm:p-5">
+                <FieldLabel>Additional directives</FieldLabel>
+                <Textarea
+                  rows={3}
+                  value={config.customInstructions}
+                  onChange={(e) => {
+                    resetRefinement();
+                    setConfig({ ...config, customInstructions: e.target.value });
+                  }}
+                  placeholder="Anything specific the generated UI must respect…"
+                  aria-label="Additional directives"
+                />
               </div>
             </div>
-
-            <div className="mt-4 pt-3 border-t border-zinc-800/80 space-y-2">
-              <button
-                onClick={handleCopy}
-                className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-600 hover:bg-red-500 py-2.5 text-xs font-bold text-white transition-colors"
-              >
-                {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-                <span>{copied ? 'Copied!' : 'Copy Prompt'}</span>
-              </button>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={handleSaveToLibrary}
-                  className="flex items-center justify-center gap-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 py-2 text-xs font-semibold text-zinc-300 transition-colors"
-                >
-                  {savedSuccess ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Save className="h-3.5 w-3.5 text-zinc-400" />}
-                  <span>{savedSuccess ? 'Saved' : 'Save'}</span>
-                </button>
-
-                <button
-                  onClick={() => onPreviewPrompt(currentPromptObject)}
-                  className="flex items-center justify-center gap-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 py-2 text-xs font-semibold text-zinc-300 transition-colors"
-                >
-                  <Play className="h-3.5 w-3.5 text-cyan-400" />
-                  <span>Preview</span>
-                </button>
-              </div>
-            </div>
-
           </div>
 
-        </div>
+          {/* ---------------- Output ---------------- */}
+          <div className="lg:col-span-5">
+            <div className="lg:sticky lg:top-20">
+              <div className="overflow-hidden rounded-lg border border-border bg-surface">
+                <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Terminal className="h-3.5 w-3.5 shrink-0 text-subtle-foreground" />
+                    <span className="truncate font-mono text-[11px] uppercase tracking-wider text-subtle-foreground">
+                      system-prompt.md
+                    </span>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={handleEnhanceWithAI} disabled={isEnhancing}>
+                    <Wand2 className={isEnhancing ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
+                    <span>{isEnhancing ? 'Refining' : 'AI refine'}</span>
+                  </Button>
+                </div>
 
+                <Well className="m-0 rounded-none border-0 border-b border-border">
+                  <pre className="max-h-80 overflow-y-auto whitespace-pre-wrap p-4 font-mono text-xs leading-relaxed text-muted-foreground">
+                    {activePromptText}
+                  </pre>
+                </Well>
+
+                <div className="space-y-2.5 p-4">
+                  {refineNotice && (
+                    <ErrorNotice>
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>{refineNotice}</span>
+                    </ErrorNotice>
+                  )}
+
+                  <div className="flex items-center justify-between gap-3 font-mono text-[11px] text-subtle-foreground">
+                    <span>{activePromptText.length.toLocaleString()} characters</span>
+                    <span>{enhancedTextOverride ? 'AI refined' : 'Template'}</span>
+                  </div>
+
+                  <Button variant="primary" size="md" onClick={handleCopy} className="w-full">
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    <span>{copied ? 'Copied to clipboard' : 'Copy prompt'}</span>
+                  </Button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="secondary" size="md" onClick={handleSaveToLibrary}>
+                      {savedSuccess ? <Check className="h-3.5 w-3.5 text-success" /> : <Save className="h-3.5 w-3.5" />}
+                      <span>{savedSuccess ? 'Saved' : 'Save'}</span>
+                    </Button>
+                    <Button variant="secondary" size="md" onClick={() => onPreviewPrompt(currentPromptObject)}>
+                      <Play className="h-3.5 w-3.5" />
+                      <span>Preview</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );

@@ -29,7 +29,10 @@ function generateAvatarUrl(name: string): string {
     .substring(0, 2)
     .toUpperCase();
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4f46e5" /><stop offset="100%" stop-color="#06b6d4" /></linearGradient></defs><rect width="100" height="100" rx="50" fill="url(#grad)" /><text x="50" y="50" font-family="system-ui, sans-serif" font-size="40" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="central">${initials}</text></svg>`;
+  // Neutral avatar so it sits correctly in both the light and dark themes.
+  // Baked into a data URI at sign-in time, so it cannot react to theme changes;
+  // mid-grey with white initials keeps sufficient contrast either way.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#71717a" /><text x="50" y="50" font-family="system-ui, sans-serif" font-size="38" font-weight="600" fill="#ffffff" text-anchor="middle" dominant-baseline="central">${initials}</text></svg>`;
 
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }

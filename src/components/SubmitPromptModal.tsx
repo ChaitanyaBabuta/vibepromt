@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { X, Plus, Terminal, Check, Layers, Cpu, Code2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Plus, Check } from 'lucide-react';
 import { UIPrompt, PromptCategory, DesignStyle, TechStackItem, TargetTool } from '../types';
+import { Button, FieldLabel, Input, Select, Textarea } from './ui/primitives';
 
 interface SubmitPromptModalProps {
   isOpen: boolean;
@@ -8,9 +9,32 @@ interface SubmitPromptModalProps {
   onSubmit: (prompt: UIPrompt) => void;
 }
 
-export const SubmitPromptModal: React.FC<SubmitPromptModalProps> = ({ isOpen, onClose, onSubmit }) => {
-  if (!isOpen) return null;
+const CATEGORY_OPTIONS: PromptCategory[] = [
+  'Dashboard',
+  'Landing Page',
+  'SaaS',
+  'AI Agent UI',
+  'Bento Grid',
+  'E-commerce',
+  'Mobile App',
+  'Portfolio',
+  'Analytics',
+  'FinTech',
+];
 
+const STYLE_OPTIONS: DesignStyle[] = [
+  'Glassmorphism',
+  'Minimalist',
+  'Cyberpunk Neon',
+  'Obsidian Dark',
+  'Bento Grid',
+  'Neumorphic',
+  'Gradient Accent',
+];
+
+const TARGET_TOOL_OPTIONS: TargetTool[] = ['v0', 'Cursor', 'Bolt.new', 'Claude', 'Windsurf'];
+
+export const SubmitPromptModal: React.FC<SubmitPromptModalProps> = ({ isOpen, onClose, onSubmit }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [fullPrompt, setFullPrompt] = useState('');
@@ -21,6 +45,20 @@ export const SubmitPromptModal: React.FC<SubmitPromptModalProps> = ({ isOpen, on
   const [targetTool, setTargetTool] = useState<TargetTool>('v0');
   const [authorName, setAuthorName] = useState('');
   const [submitted, setSubmitted] = useState(false);
+
+  // Close on Escape and lock page scroll while open
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, onClose]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,176 +97,168 @@ export const SubmitPromptModal: React.FC<SubmitPromptModalProps> = ({ isOpen, on
     }, 1500);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      
-      {/* Click Backdrop */}
-      <div className="fixed inset-0" onClick={onClose} />
+  // NOTE: this early return must stay below every hook above it.
+  if (!isOpen) return null;
 
-      {/* Modal Container */}
-      <div className="relative w-full max-w-2xl rounded-3xl bg-zinc-950 border border-zinc-800 shadow-2xl p-6 sm:p-8 z-10 my-8">
-        
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-6">
+      {/* Scrim */}
+      <div
+        className="fixed inset-0 bg-overlay animate-fade-in"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="submit-prompt-title"
+        className="relative z-10 mx-auto my-4 w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-surface shadow-modal animate-scale-in"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-600/20 text-red-400 border border-red-500/30">
+        <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-6">
+          <div className="flex items-start gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface-secondary text-muted-foreground">
               <Plus className="h-4 w-4" />
-            </div>
+            </span>
             <div>
-              <h2 className="text-lg font-bold text-white">Submit a Vibe Prompt</h2>
-              <p className="text-xs text-zinc-400">Share your battle-tested UI prompts with the Vibe Coding community.</p>
+              <h2 id="submit-prompt-title" className="text-[15px] font-semibold tracking-tight text-foreground">
+                Submit a prompt
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Saved to your library in this browser.
+              </p>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-cyan-400 text-xs font-semibold text-zinc-300 hover:text-white transition-all shadow-md group cursor-pointer"
-            title="Close and go back to main page"
-          >
-            <span className="hidden sm:inline">Main Page</span>
-            <X className="h-4 w-4 text-cyan-400 group-hover:scale-110 transition-transform" />
-          </button>
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
+            <X className="h-4 w-4" />
+          </Button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1 block">
-              Prompt Title *
-            </label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Glassmorphism Crypto & Portfolio Analytics Dashboard"
-              className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-3.5 py-2.5 text-xs text-zinc-200 placeholder-zinc-600 focus:border-red-500 focus:outline-none"
-            />
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit}>
+          <div className="max-h-[65vh] space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1 block">
-                Category
-              </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as PromptCategory)}
-                className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2 text-xs text-zinc-200 focus:outline-none"
-              >
-                <option value="Dashboard">Dashboard</option>
-                <option value="Landing Page">Landing Page</option>
-                <option value="SaaS">SaaS</option>
-                <option value="AI Agent UI">AI Agent UI</option>
-                <option value="Bento Grid">Bento Grid</option>
-                <option value="E-commerce">E-commerce</option>
-                <option value="Mobile App">Mobile App</option>
-                <option value="Portfolio">Portfolio</option>
-                <option value="Analytics">Analytics</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1 block">
-                Design Aesthetic Style
-              </label>
-              <select
-                value={style}
-                onChange={(e) => setStyle(e.target.value as DesignStyle)}
-                className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2 text-xs text-zinc-200 focus:outline-none"
-              >
-                <option value="Glassmorphism">Glassmorphism</option>
-                <option value="Minimalist">Minimalist</option>
-                <option value="Cyberpunk Neon">Cyberpunk Neon</option>
-                <option value="Obsidian Dark">Obsidian Dark</option>
-                <option value="Bento Grid">Bento Grid</option>
-                <option value="Neumorphic">Neumorphic</option>
-                <option value="Gradient Accent">Gradient Accent</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1 block">
-              Short Description
-            </label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief summary of what this interface prompt generates..."
-              className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-3.5 py-2 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1 block">
-              Full System Prompt Text *
-            </label>
-            <textarea
-              required
-              rows={5}
-              value={fullPrompt}
-              onChange={(e) => setFullPrompt(e.target.value)}
-              placeholder="Paste the full, detailed prompt instructions here..."
-              className="w-full rounded-xl bg-zinc-900 border border-zinc-800 p-3 text-xs text-zinc-200 font-mono placeholder-zinc-600 focus:border-red-500 focus:outline-none"
-            />
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1 block">
-                Tech Stack (comma separated)
-              </label>
-              <input
+              <FieldLabel>
+                Title <span className="text-destructive">*</span>
+              </FieldLabel>
+              <Input
                 type="text"
-                value={techStackInput}
-                onChange={(e) => setTechStackInput(e.target.value)}
-                placeholder="Tailwind CSS, Shadcn UI, Recharts..."
-                className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2 text-xs text-zinc-200 focus:outline-none"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Glassmorphism crypto analytics dashboard"
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <FieldLabel>Category</FieldLabel>
+                <Select value={category} onChange={(e) => setCategory(e.target.value as PromptCategory)}>
+                  {CATEGORY_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </Select>
+              </div>
+
+              <div>
+                <FieldLabel>Design style</FieldLabel>
+                <Select value={style} onChange={(e) => setStyle(e.target.value as DesignStyle)}>
+                  {STYLE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <FieldLabel>Short description</FieldLabel>
+              <Input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What does this prompt generate?"
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1 block">
-                Author Name / Handle
-              </label>
-              <input
-                type="text"
-                value={authorName}
-                onChange={(e) => setAuthorName(e.target.value)}
-                placeholder="e.g. Alex Vibe"
-                className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2 text-xs text-zinc-200 focus:outline-none"
+              <FieldLabel>
+                Full system prompt <span className="text-destructive">*</span>
+              </FieldLabel>
+              <Textarea
+                required
+                rows={7}
+                value={fullPrompt}
+                onChange={(e) => setFullPrompt(e.target.value)}
+                placeholder="Paste the full, detailed prompt instructions here…"
+                className="font-mono text-xs"
               />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <FieldLabel>Target tool</FieldLabel>
+                <Select value={targetTool} onChange={(e) => setTargetTool(e.target.value as TargetTool)}>
+                  {TARGET_TOOL_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </Select>
+              </div>
+
+              <div>
+                <FieldLabel>Author name</FieldLabel>
+                <Input
+                  type="text"
+                  value={authorName}
+                  onChange={(e) => setAuthorName(e.target.value)}
+                  placeholder="e.g. Alex Vibe"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <FieldLabel>Tech stack</FieldLabel>
+                <Input
+                  type="text"
+                  value={techStackInput}
+                  onChange={(e) => setTechStackInput(e.target.value)}
+                  placeholder="Comma separated"
+                />
+                <p className="mt-1.5 text-[11px] text-subtle-foreground">Comma separated.</p>
+              </div>
+
+              <div>
+                <FieldLabel>Components included</FieldLabel>
+                <Input
+                  type="text"
+                  value={componentsInput}
+                  onChange={(e) => setComponentsInput(e.target.value)}
+                  placeholder="Comma separated"
+                />
+                <p className="mt-1.5 text-[11px] text-subtle-foreground">Comma separated.</p>
+              </div>
             </div>
           </div>
 
-          <div className="pt-4 border-t border-zinc-800 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-2 text-xs font-semibold text-zinc-400 hover:text-white"
-            >
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 border-t border-border bg-surface-secondary px-5 py-4 sm:px-6">
+            <Button type="button" variant="ghost" size="md" onClick={onClose}>
               Cancel
-            </button>
-
-            <button
-              type="submit"
-              className="flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-500 px-5 py-2 text-xs font-bold text-white shadow-lg shadow-red-600/30"
-            >
+            </Button>
+            <Button type="submit" variant="primary" size="md">
               {submitted ? (
                 <>
-                  <Check className="h-4 w-4 text-emerald-400" /> Submitted!
+                  <Check className="h-4 w-4" />
+                  <span>Saved</span>
                 </>
               ) : (
-                'Publish Prompt'
+                <span>Publish prompt</span>
               )}
-            </button>
+            </Button>
           </div>
-
         </form>
-
       </div>
     </div>
   );
